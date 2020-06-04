@@ -145,3 +145,6 @@ logs/
 
 # Data
 data/
+
+# Results
+results/
