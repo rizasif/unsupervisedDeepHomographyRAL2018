@@ -124,6 +124,7 @@ class Dataloader(object):
       input_queue = tf.train.slice_input_producer([img_files, pts1_tf], shuffle=shuffle)
 
     # image names
+    print(input_queue[0])
     split_line  = tf.string_split(input_queue[0]).values
     filename_batch = split_line
 

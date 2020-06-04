@@ -23,7 +23,7 @@ FULL_HEIGHT = 240 #
 FULL_WIDTH =  320
 
 # Data directories
-DATA_PATH = "/home/tynguyen/pose_estimation/data/real/" + str(RHO) + '/'
+DATA_PATH = "../data/real/" + str(RHO) + '/'
 if not os.path.exists(DATA_PATH):
   os.makedirs(DATA_PATH)
 
@@ -42,7 +42,7 @@ TEST_FILENAMES_FILE = os.path.join(DATA_PATH,'test_real.txt')
 TEST_GROUND_TRUTH_FILE = os.path.join(DATA_PATH,'test_gt.txt')
 
 # Log and model directories
-MAIN_LOG_PATH = '/media/tynguyen/DATA/'
+MAIN_LOG_PATH = '../logs/'
 LOG_DIR       = MAIN_LOG_PATH + "docker_folder/pose_estimation/logs/"
 
 # Where to load model

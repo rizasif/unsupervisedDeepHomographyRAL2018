@@ -17,7 +17,7 @@ RHO = 45
 PATCH_SIZE = 128
 
 # Synthetic data directories
-DATA_PATH = "/home/tynguyen/pose_estimation/data/synthetic/" + str(RHO) + '/'
+DATA_PATH = "../data/synthetic/" + str(RHO) + '/'
 
 if not os.path.exists(DATA_PATH):
   os.makedirs(DATA_PATH)
@@ -34,8 +34,8 @@ TEST_GROUND_TRUTH_FILE = os.path.join(DATA_PATH,'test_gt.txt')
 
 # Log and model directories
 MAIN_LOG_PATH = '../'
-LOG_DIR       = MAIN_LOG_PATH + "logs/"
-MODEL_DIR     = MAIN_LOG_PATH + "models/synthetic_models"
+LOG_DIR       = MAIN_LOG_PATH + "../logs/"
+MODEL_DIR     = "../models/"
 
 # Where to save visualization images (for report)
 RESULTS_DIR   = MAIN_LOG_PATH + "results/synthetic/report/"
@@ -77,7 +77,7 @@ parser.add_argument('--img_w',         type=int, default=WIDTH)
 parser.add_argument('--img_h',         type=int, default=HEIGHT)
 parser.add_argument('--patch_size',    type=int, default=PATCH_SIZE)
 parser.add_argument('--batch_size',    type=int, default=128)
-parser.add_argument('--max_epoches',   type=int, default=150)
+parser.add_argument('--max_epoches',   type=int, default=150000)
 parser.add_argument('--lr',            type=float, default=1e-4, help='Max learning rate')
 parser.add_argument('--min_lr',        type=float, default=.9e-4, help='Min learning rate')
 
@@ -158,7 +158,8 @@ def train():
     num_data = utils.count_text_lines(args.filenames_file)
     print('===> Train: There are totally %d training files'%(num_data))
 
-    num_total_steps = 150000
+    num_total_steps = args.max_epoches
+    print("===> Assigned num_total_steps: ", num_total_steps)
 
     # Optimizer. Use exponential decay: decayed_lr = lr* decay_rate^ (global_steps/ decay_steps)
     decay_rate = 0.96

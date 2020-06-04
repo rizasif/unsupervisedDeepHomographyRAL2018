@@ -8,6 +8,7 @@ from utils import progress_bar, removeHiddenfile, draw_matches
 from utils import show_image, find_nine_grid_points
 from numpy_spatial_transformer import numpy_transformer
 from matplotlib import pyplot as plt
+import math
 
 def homographyGeneration(args, raw_image_path, index):
 
@@ -18,11 +19,19 @@ def homographyGeneration(args, raw_image_path, index):
 
   try:
     color_image = cv2.imread(raw_image_path)
+
+    # rotation_angle = random.randint(30, 270)
+    # rotation_angle = 180
+    # rotated_image = imutils.rotate_bound(color_image, rotation_angle)
+
+    # rotated_color_image = cv2.resize(rotated_image, (width, height))
+    # rotated_gray_image = cv2.cvtColor(rotated_image, cv2.COLOR_RGB2GRAY)
+
     color_image = cv2.resize(color_image, (width, height))
     gray_image  = cv2.cvtColor(color_image, cv2.COLOR_RGB2GRAY)
 
   except:
-    print 'Error with image:', raw_image_path
+    print('Error with image:', raw_image_path)
     return index, -1
 
 
@@ -30,17 +39,55 @@ def homographyGeneration(args, raw_image_path, index):
   if args.mode=='train' and not args.debug:
     f_pts1      = open(args.pts1_file, 'ab')
     f_gt        = open(args.gt_file, 'ab')
-    f_file_list = open(args.filenames_file, 'ab')
+    f_file_list = open(args.filenames_file, 'a')
   elif not args.debug:
     f_pts1      = open(args.test_pts1_file, 'ab')
     f_gt        = open(args.test_gt_file, 'ab')
-    f_file_list = open(args.test_filenames_file, 'ab')
+    f_file_list = open(args.test_filenames_file, 'a')
 
+  def get_centroid(points):
+    x = [p[0] for p in points]
+    y = [p[1] for p in points]
+    centroid = (sum(x) / len(points), sum(y) / len(points))
+    return centroid
+
+  def rotate_point(point, angle, center_point=(0, 0)):
+    """Rotates a point around center_point(origin by default)
+    Angle is in degrees.
+    Rotation is counter-clockwise
+    """
+    angle_rad = math.radians(angle % 360)
+    # Shift the point so that center_point becomes the origin
+    new_point = (point[0] - center_point[0], point[1] - center_point[1])
+    new_point = (new_point[0] * math.cos(angle_rad) - new_point[1] * math.sin(angle_rad),
+                 new_point[0] * math.sin(angle_rad) + new_point[1] * math.cos(angle_rad))
+    # Reverse the shifting we have done
+    new_point = (new_point[0] + center_point[0], new_point[1] + center_point[1])
+    return new_point
+
+  def rotate_polygon(polygon, angle):
+    """Rotates the given polygon which consists of corners represented as (x,y)
+    around center_point (origin by default)
+    Rotation is counter-clockwise
+    Angle is in degrees
+    """
+    center_point = get_centroid(polygon)
+    rotated_polygon = []
+    for corner in polygon:
+        rotated_corner = rotate_point(corner, angle, center_point)
+        rotated_polygon.append(rotated_corner)
+    return rotated_polygon
+
+
+    # Apply rotation, then translation to each point
+    return [translate(rotate(xy, theta), xy) for xy in points]
 
   for i in range(args.img_per_real):
     # Randomly pick the top left point of the patch on the real image
     y = random.randint(rho, height - rho - patch_size)  # row?
     x = random.randint(rho, width - rho - patch_size)  # col?
+    # y = int((height - patch_size)/2)
+    # x = int((width - patch_size)/2)
 
     # define corners of image patch
     top_left_point     = (x, y)
@@ -48,8 +95,10 @@ def homographyGeneration(args, raw_image_path, index):
     bottom_right_point = (patch_size + x, patch_size + y)
     top_right_point    = (x, patch_size + y)
     four_points        = [top_left_point, bottom_left_point, bottom_right_point, top_right_point]
+    rotated_four_points = rotate_polygon(four_points, random.randint(0, 180))
+    
     perturbed_four_points = []
-    for point in four_points:
+    for point in rotated_four_points:
       perturbed_four_points.append((point[0] + random.randint(-rho, rho), point[1] + random.randint(-rho, rho)))
 
     # compute Homography 
@@ -57,7 +106,7 @@ def homographyGeneration(args, raw_image_path, index):
     try:
       H_inverse = inv(H)
     except:
-      print "singular Error!"
+      print("singular Error!")
       return index, 0
 
     inv_warped_color_image = numpy_transformer(color_image, H_inverse, (width, height))
@@ -129,7 +178,7 @@ def homographyGeneration(args, raw_image_path, index):
     if index >= args.num_data + args.start_index:
       break
     if index %1000 == 0:
-      print '--image number ', index
+      print('--image number ', index)
 
   f_gt.close()
   f_pts1.close()
@@ -143,23 +192,23 @@ def dataCollection(args):
       os.remove(args.gt_file)
       os.remove(args.pts1_file)
       os.remove(args.filenames_file)
-      print'-- Current {} existed. Deleting..!'.format(args.gt_file)
+      print('-- Current {} existed. Deleting..!'.format(args.gt_file))
       shutil.rmtree(args.I_dir, ignore_errors=True)
       if args.I_prime_dir is not None:
         shutil.rmtree(args.I_prime_dir, ignore_errors=True)
     except :
-      print'-- Train: Current {} not existed yet!'.format(args.gt_file)
+      print('-- Train: Current {} not existed yet!'.format(args.gt_file))
   else:
-    print '--- Train: Appending to existing data---'
+    print('--- Train: Appending to existing data---')
 
   if (args.resume == 'N' or args.resume == 'n') and args.mode=='test' and not args.debug:
     try:
       os.remove(args.test_gt_file)
       os.remove(args.test_pts1_file)
       os.remove(args.test_filenames_file)
-      print'-- Test: Current {} existed. Deleting..!'.format(args.test_gt_file)
+      print('-- Test: Current {} existed. Deleting..!'.format(args.test_gt_file))
     except :
-      print'-- Test: Current {} not existed yet!'.format(args.test_gt_file)
+      print('-- Test: Current {} not existed yet!'.format(args.test_gt_file))
   else:
     pass
   if not args.debug:
@@ -199,11 +248,11 @@ def main():
   PATCH_SIZE = 128
 
   # Directories to files
-  RAW_DATA_PATH = "/Earthbyte/tynguyen/rawdata/train/" # Real images used for generating synthetic data
-  TEST_RAW_DATA_PATH = "/Earthbyte/tynguyen/rawdata/test/" # Real images used for generating test synthetic data
+  RAW_DATA_PATH = "../data/coco_train/" # Real images used for generating synthetic data
+  TEST_RAW_DATA_PATH = "../data/coco_test/" # Real images used for generating test synthetic data
 
   # Synthetic data directories
-  DATA_PATH = "/Earthbyte/tynguyen/docker_folder/pose_estimation/data/synthetic/" + str(RHO) + '/'
+  DATA_PATH = "../data/synthetic/" + str(RHO) + '/'
   if not os.path.exists(DATA_PATH):
     os.makedirs(DATA_PATH)
 
@@ -256,7 +305,7 @@ def main():
     args.num_data    = args.test_num_data
     args.raw_data_path = args.test_raw_data_path
 
-  print '<================= Generating Data .... =================>\n'
+  print('<================= Generating Data .... =================>\n')
 
   dataCollection(args)
 
